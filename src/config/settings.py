@@ -22,7 +22,7 @@ class Settings(BaseSettings):
         ..., description="OpenAI API key for LLM integration"
     )
     openai_model: str = Field(
-        default="gpt-4", description="OpenAI model to use for generation"
+        default="gpt-4o-mini", description="OpenAI model to use for generation"
     )
 
     # PowerPoint Templates
