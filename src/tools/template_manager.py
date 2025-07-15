@@ -7,7 +7,7 @@ slides with proper placeholder management and branding preservation.
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 from pptx import Presentation
 from pptx.exc import PackageNotFoundError
@@ -55,7 +55,7 @@ class TemplateManager:
             ValueError: If template file is invalid
         """
         template_path = template_path or self.template_path
-        
+
         if not template_path.exists():
             raise FileNotFoundError(f"Template file not found: {template_path}")
 
@@ -63,15 +63,15 @@ class TemplateManager:
             # PATTERN: Load company template safely
             self.presentation = Presentation(str(template_path))
             self.slide_layouts = self.presentation.slide_layouts
-            
+
             # Map layouts for easier access
             self._map_slide_layouts()
-            
+
             logger.info(f"Loaded template: {template_path.name} with {len(self.slide_layouts)} layouts")
             return self.presentation
 
         except PackageNotFoundError:
-            raise ValueError(f"Invalid PowerPoint template: {template_path}")
+            raise ValueError(f"Invalid PowerPoint template: {template_path}") from None
         except Exception as e:
             logger.error(f"Error loading template {template_path}: {e}")
             raise
@@ -79,11 +79,11 @@ class TemplateManager:
     def _map_slide_layouts(self) -> None:
         """Map slide layouts by name and common patterns."""
         self._layout_mapping = {}
-        
+
         for i, layout in enumerate(self.slide_layouts):
             layout_name = layout.name.lower()
             self._layout_mapping[layout_name] = i
-            
+
             # Common layout patterns
             if "title" in layout_name and "slide" in layout_name:
                 self._layout_mapping["title"] = i
@@ -99,7 +99,7 @@ class TemplateManager:
                 self._layout_mapping["two_content"] = i
             elif "picture" in layout_name or "caption" in layout_name:
                 self._layout_mapping["picture_caption"] = i
-            
+
             # Diagram-specific layout patterns
             if "diagram" in layout_name:
                 self._layout_mapping["diagram"] = i
@@ -122,11 +122,11 @@ class TemplateManager:
             ValueError: If layout type not found
         """
         layout_type = layout_type.lower()
-        
+
         # Direct mapping
         if layout_type in self._layout_mapping:
             return self._layout_mapping[layout_type]
-        
+
         # Fallback patterns
         if layout_type == "title":
             return self._layout_mapping.get("title", 0)
@@ -136,14 +136,14 @@ class TemplateManager:
             return self._layout_mapping.get("blank", 6)
         elif layout_type == "diagram":
             # Prefer blank layout for diagrams, then two_content, then default
-            return self._layout_mapping.get("diagram", 
-                   self._layout_mapping.get("blank", 
+            return self._layout_mapping.get("diagram",
+                   self._layout_mapping.get("blank",
                    self._layout_mapping.get("two_content", 6)))
         elif layout_type == "split":
             # For split content with diagram
             return self._layout_mapping.get("split",
                    self._layout_mapping.get("two_content", 1))
-        
+
         # Default fallback
         logger.warning(f"Layout type '{layout_type}' not found, using default (1)")
         return 1
@@ -168,13 +168,13 @@ class TemplateManager:
             # Get appropriate layout
             layout_index = self.get_layout_index(slide_spec.layout_type)
             layout = self.slide_layouts[layout_index]
-            
+
             # Add slide to presentation
             slide = self.presentation.slides.add_slide(layout)
-            
+
             # Populate slide content
             self._populate_slide_content(slide, slide_spec)
-            
+
             logger.debug(f"Created slide: {slide_spec.title}")
             return slide
 
@@ -244,7 +244,7 @@ class TemplateManager:
         try:
             # Find content placeholder
             content_placeholder = None
-            
+
             # Try different placeholder indices
             for placeholder_idx in [1, 2]:
                 try:
@@ -272,7 +272,7 @@ class TemplateManager:
                 else:
                     # Add new paragraph
                     p = text_frame.add_paragraph()
-                
+
                 p.text = bullet_point
                 p.level = 0  # Main bullet level
 
@@ -290,27 +290,38 @@ class TemplateManager:
         Returns:
             Recommended layout type
         """
-        # Diagram-specific layout preferences
-        layout_preferences = {
-            "microservices": "diagram" if not has_content else "split",
-            "data_pipeline": "blank" if not has_content else "two_content", 
-            "cloud_architecture": "diagram" if not has_content else "split",
-            "database_schema": "blank" if not has_content else "picture_caption"
-        }
-        
-        preferred_layout = layout_preferences.get(diagram_type, "blank")
-        
-        # Fallback to available layouts if preferred not available
-        if preferred_layout not in self._layout_mapping:
-            if has_content:
-                preferred_layout = "two_content" if "two_content" in self._layout_mapping else "bullet"
-            else:
-                preferred_layout = "blank" if "blank" in self._layout_mapping else "bullet"
-        
-        logger.debug(f"Selected layout '{preferred_layout}' for diagram type '{diagram_type}'")
-        return preferred_layout
+        # For dedicated diagram slides (has_content=False), prioritize layouts that give maximum space
+        if not has_content:
+            # Priority order for dedicated diagram slides
+            preferred_layouts = ["blank", "diagram", "title_content", "bullet"]
 
-    def adjust_slide_for_diagram(self, slide: Slide, layout_type: str) -> Dict[str, any]:
+            for layout in preferred_layouts:
+                if layout in self._layout_mapping:
+                    logger.debug(f"Selected layout '{layout}' for dedicated diagram '{diagram_type}'")
+                    return layout
+        else:
+            # Diagram-specific layout preferences when there's content
+            layout_preferences = {
+                "microservices": "split",
+                "data_pipeline": "two_content",
+                "cloud_architecture": "split",
+                "database_schema": "picture_caption"
+            }
+
+            preferred_layout = layout_preferences.get(diagram_type, "two_content")
+
+            # Fallback to available layouts if preferred not available
+            if preferred_layout not in self._layout_mapping:
+                preferred_layout = "two_content" if "two_content" in self._layout_mapping else "bullet"
+
+            logger.debug(f"Selected layout '{preferred_layout}' for diagram type '{diagram_type}' with content")
+            return preferred_layout
+
+        # Final fallback
+        logger.warning(f"No suitable layout found for diagram type '{diagram_type}', using default")
+        return "bullet"
+
+    def adjust_slide_for_diagram(self, slide: Slide, layout_type: str) -> dict[str, any]:
         """
         Adjust slide layout to accommodate diagram insertion.
 
@@ -327,12 +338,10 @@ class TemplateManager:
             "content_area": None,
             "diagram_area": None
         }
-        
+
         try:
             # Get slide dimensions (standard PowerPoint slide)
-            slide_width = Inches(10)  # Standard slide width
-            slide_height = Inches(7.5)  # Standard slide height
-            
+
             if layout_type in ["two_content", "split"]:
                 # Split layout - content on left, diagram on right
                 adjustment_info["content_area"] = {
@@ -343,12 +352,12 @@ class TemplateManager:
                 }
                 adjustment_info["diagram_area"] = {
                     "left": Inches(5.0),
-                    "top": Inches(1.5), 
+                    "top": Inches(1.5),
                     "width": Inches(4.5),
                     "height": Inches(5.5)
                 }
                 adjustment_info["adjustments_made"].append("Split layout configured")
-                
+
             elif layout_type in ["blank", "diagram"]:
                 # Full slide for diagram with minimal text
                 adjustment_info["content_area"] = {
@@ -364,7 +373,7 @@ class TemplateManager:
                     "height": Inches(5.0)
                 }
                 adjustment_info["adjustments_made"].append("Full diagram layout configured")
-                
+
             elif layout_type == "picture_caption":
                 # Diagram with caption below
                 adjustment_info["diagram_area"] = {
@@ -380,7 +389,7 @@ class TemplateManager:
                     "height": Inches(1.0)
                 }
                 adjustment_info["adjustments_made"].append("Picture caption layout configured")
-                
+
             else:
                 # Default content layout with space for diagram
                 adjustment_info["content_area"] = {
@@ -396,13 +405,13 @@ class TemplateManager:
                     "height": Inches(5.5)
                 }
                 adjustment_info["adjustments_made"].append("Default content layout with diagram space")
-            
+
             logger.debug(f"Adjusted slide for diagram: {adjustment_info['adjustments_made']}")
-            
+
         except Exception as e:
             logger.error(f"Error adjusting slide for diagram: {e}")
             adjustment_info["error"] = str(e)
-        
+
         return adjustment_info
 
     def create_presentation_from_spec(self, spec: PresentationSpec) -> Path:
@@ -421,7 +430,7 @@ class TemplateManager:
         try:
             # Load template
             self.load_template(spec.template_path)
-            
+
             # Remove existing slides (except keep master)
             slide_count = len(self.presentation.slides)
             for i in range(slide_count - 1, -1, -1):
@@ -438,7 +447,7 @@ class TemplateManager:
 
             # Save presentation
             self.presentation.save(str(spec.output_path))
-            
+
             logger.info(f"Created presentation: {spec.output_path}")
             return spec.output_path
 
@@ -446,7 +455,7 @@ class TemplateManager:
             logger.error(f"Error creating presentation: {e}")
             raise
 
-    def get_template_info(self) -> Dict:
+    def get_template_info(self) -> dict:
         """
         Get information about the loaded template.
 
@@ -463,7 +472,7 @@ class TemplateManager:
             "template_path": str(self.template_path)
         }
 
-    def validate_template(self, template_path: Path) -> Tuple[bool, str]:
+    def validate_template(self, template_path: Path) -> tuple[bool, str]:
         """
         Validate a PowerPoint template file.
 
@@ -479,7 +488,7 @@ class TemplateManager:
 
             # Try to load the template
             test_presentation = Presentation(str(template_path))
-            
+
             # Check basic requirements
             if len(test_presentation.slide_layouts) == 0:
                 return False, "Template has no slide layouts"
@@ -497,7 +506,7 @@ class TemplateManager:
         except Exception as e:
             return False, f"Template validation failed: {e}"
 
-    def list_available_templates(self) -> List[Path]:
+    def list_available_templates(self) -> list[Path]:
         """
         List available PowerPoint templates.
 
@@ -505,24 +514,53 @@ class TemplateManager:
             List of template file paths
         """
         templates = []
-        
+
         # Check template directory
         if settings.template_dir.exists():
             templates.extend(settings.template_dir.glob("*.pptx"))
-        
+
         # Check project root for Keyrus templates
         project_root = Path(".")
         templates.extend(project_root.glob("*Template*.pptx"))
         templates.extend(project_root.glob("*template*.pptx"))
-        
+
         # Remove duplicates and sort
         unique_templates = list(set(templates))
         unique_templates.sort()
-        
+
         return unique_templates
 
+    def create_diagram_slide_spec(self, diagram) -> 'GeneratedSlide':
+        """
+        Create a slide specification for a diagram.
+
+        Args:
+            diagram: Generated diagram to create slide spec for
+
+        Returns:
+            GeneratedSlide specification for the diagram
+        """
+        from ..models.data_models import GeneratedSlide
+
+        # Get optimal layout for this diagram type
+        layout_type = self.get_optimal_layout_for_diagram(
+            diagram.spec.diagram_type,
+            has_content=False
+        )
+
+        # Create slide specification
+        slide_spec = GeneratedSlide(
+            title=diagram.spec.title,
+            content=[],  # No text content for dedicated diagram slides
+            layout_type=layout_type,
+            notes=f"Architecture diagram showing {diagram.spec.diagram_type} components and their relationships."
+        )
+
+        logger.debug(f"Created diagram slide spec: {diagram.spec.title} with layout {layout_type}")
+        return slide_spec
+
     @staticmethod
-    def get_default_slide_specs(project_title: str, client_name: str) -> List[GeneratedSlide]:
+    def get_default_slide_specs(project_title: str, client_name: str) -> list[GeneratedSlide]:
         """
         Generate default slide specifications for a presentation.
 

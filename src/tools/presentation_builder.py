@@ -8,10 +8,16 @@ using company templates with proper branding and formatting.
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 from ..config.settings import settings
-from ..models.data_models import ContentGenerationResult, GeneratedSlide, PresentationSpec, ProjectDescription, GeneratedDiagram
+from ..models.data_models import (
+    ContentGenerationResult,
+    GeneratedDiagram,
+    GeneratedSlide,
+    PresentationSpec,
+    ProjectDescription,
+)
 from .template_manager import TemplateManager
 
 logger = logging.getLogger(__name__)
@@ -59,18 +65,18 @@ class PresentationBuilder:
         """
         try:
             logger.info(f"Building presentation for {project.client_name}")
-            
+
             # Generate output filename if not provided
             if not output_filename:
                 output_filename = self._generate_output_filename(project)
-            
+
             # Ensure output path has correct extension
             if not output_filename.endswith('.pptx'):
                 output_filename += '.pptx'
-            
+
             # Create full output path
             output_path = settings.output_dir / output_filename
-            
+
             # Create presentation specification
             presentation_spec = PresentationSpec(
                 project=project,
@@ -78,28 +84,28 @@ class PresentationBuilder:
                 template_path=template_path or settings.template_path,
                 output_path=output_path
             )
-            
+
             # Store current spec for potential adjustments
             self.current_spec = presentation_spec
-            
+
             # Validate template
             is_valid, error_msg = self.template_manager.validate_template(presentation_spec.template_path)
             if not is_valid:
                 logger.warning(f"Template validation failed: {error_msg}")
                 # Continue with default template handling
-            
+
             # Create the presentation
             created_path = self.template_manager.create_presentation_from_spec(presentation_spec)
-            
+
             # Add metadata and properties
             self._set_presentation_properties(created_path, project, generation_result)
-            
+
             logger.info(f"Successfully created presentation: {created_path}")
             return created_path
 
         except Exception as e:
             logger.error(f"Failed to build presentation: {e}")
-            raise ValueError(f"Presentation building failed: {e}")
+            raise ValueError(f"Presentation building failed: {e}") from e
 
     def _generate_output_filename(self, project: ProjectDescription) -> str:
         """
@@ -114,13 +120,13 @@ class PresentationBuilder:
         # Clean client name for filename
         client_clean = "".join(c for c in project.client_name if c.isalnum() or c in (' ', '-', '_'))
         client_clean = client_clean.strip().replace(' ', '_')
-        
+
         # Add timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M")
-        
+
         # Create filename
         filename = f"{client_clean}_Proposal_{timestamp}.pptx"
-        
+
         return filename
 
     def _set_presentation_properties(
@@ -139,10 +145,10 @@ class PresentationBuilder:
         """
         try:
             from pptx import Presentation
-            
+
             # Load the presentation
             prs = Presentation(str(presentation_path))
-            
+
             # Set core properties
             core_props = prs.core_properties
             core_props.title = f"{project.description[:50]}... - Proposal for {project.client_name}"
@@ -153,17 +159,17 @@ class PresentationBuilder:
             core_props.keywords = f"Keyrus, {project.client_name}, Technology, Proposal"
             core_props.created = datetime.now()
             core_props.modified = datetime.now()
-            
+
             # Save updated properties
             prs.save(str(presentation_path))
-            
+
         except Exception as e:
             logger.warning(f"Failed to set presentation properties: {e}")
 
     def customize_slide_content(
         self,
         slide_index: int,
-        new_content: List[str],
+        new_content: list[str],
         new_title: Optional[str] = None,
         new_notes: Optional[str] = None
     ) -> bool:
@@ -185,16 +191,16 @@ class PresentationBuilder:
 
         try:
             slide = self.current_spec.slides[slide_index]
-            
+
             # Update content
             slide.content = new_content
-            
+
             if new_title:
                 slide.title = new_title
-            
+
             if new_notes:
                 slide.notes = new_notes
-            
+
             logger.info(f"Customized slide {slide_index}: {slide.title}")
             return True
 
@@ -205,7 +211,7 @@ class PresentationBuilder:
     def add_slide(
         self,
         title: str,
-        content: List[str],
+        content: list[str],
         layout_type: str = "bullet",
         notes: Optional[str] = None,
         position: Optional[int] = None
@@ -234,12 +240,12 @@ class PresentationBuilder:
                 layout_type=layout_type,
                 notes=notes or ""
             )
-            
+
             if position is not None and 0 <= position <= len(self.current_spec.slides):
                 self.current_spec.slides.insert(position, new_slide)
             else:
                 self.current_spec.slides.append(new_slide)
-            
+
             logger.info(f"Added slide: {title}")
             return True
 
@@ -270,7 +276,7 @@ class PresentationBuilder:
             logger.error(f"Failed to remove slide {slide_index}: {e}")
             return False
 
-    def reorder_slides(self, new_order: List[int]) -> bool:
+    def reorder_slides(self, new_order: list[int]) -> bool:
         """
         Reorder slides in the presentation.
 
@@ -295,7 +301,7 @@ class PresentationBuilder:
         try:
             original_slides = self.current_spec.slides.copy()
             self.current_spec.slides = [original_slides[i] for i in new_order]
-            
+
             logger.info("Successfully reordered slides")
             return True
 
@@ -317,7 +323,7 @@ class PresentationBuilder:
         try:
             # Create new presentation with updated specs
             rebuilt_path = self.template_manager.create_presentation_from_spec(self.current_spec)
-            
+
             logger.info(f"Successfully rebuilt presentation: {rebuilt_path}")
             return rebuilt_path
 
@@ -325,81 +331,89 @@ class PresentationBuilder:
             logger.error(f"Failed to rebuild presentation: {e}")
             return None
 
-    async def add_diagram_to_slide(
+    async def add_diagram_as_dedicated_slide(
         self,
-        presentation_path: Path,
-        slide_index: int,
+        presentation: any,
         diagram: GeneratedDiagram
     ) -> bool:
         """
-        Add diagram image to a specific slide in the presentation.
+        Add diagram as a dedicated slide in the presentation.
 
         Args:
-            presentation_path: Path to the presentation file
-            slide_index: Index of slide to add diagram to (0-based)
-            diagram: Generated diagram with image path and position
+            presentation: PowerPoint presentation object
+            diagram: Generated diagram with image path and specifications
 
         Returns:
-            True if diagram added successfully, False otherwise
+            True if diagram slide created successfully, False otherwise
         """
         try:
-            from pptx import Presentation
             from pptx.util import Inches
-            
-            # Load the presentation
-            prs = Presentation(str(presentation_path))
-            
-            # Validate slide index
-            if slide_index >= len(prs.slides):
-                logger.error(f"Invalid slide index: {slide_index} (max: {len(prs.slides) - 1})")
-                return False
-            
-            slide = prs.slides[slide_index]
-            
+
             # Verify diagram image exists
             if not diagram.image_path.exists():
                 logger.error(f"Diagram image not found: {diagram.image_path}")
                 return False
-            
-            # Get positioning from diagram specification
-            position = diagram.position
-            left = Inches(position["left"])
-            top = Inches(position["top"])
-            width = Inches(position["width"])
-            height = Inches(position["height"])
-            
-            # Add image to slide
+
+            # Get optimal layout for diagram
+            layout_type = self.template_manager.get_optimal_layout_for_diagram(
+                diagram.spec.diagram_type,
+                has_content=False  # Dedicated slide has no text content
+            )
+
+            # Get layout index
+            layout_index = self.template_manager.get_layout_index(layout_type)
+            layout = presentation.slide_layouts[layout_index]
+
+            # Create new slide
+            slide = presentation.slides.add_slide(layout)
+
+            # Set slide title
+            if slide.shapes.title:
+                slide.shapes.title.text = diagram.spec.title
+
+            # Calculate optimal diagram positioning for full slide
+            # Use nearly full slide dimensions with some padding
+
+            # Position diagram to take up most of the slide
+            left = Inches(0.5)  # Small left margin
+            top = Inches(1.5)   # Leave space for title
+            width = Inches(9.0)  # Almost full width
+            height = Inches(5.5)  # Remaining height after title
+
+            # Add diagram image to slide
             pic = slide.shapes.add_picture(
                 str(diagram.image_path),
                 left, top, width, height
             )
-            
+
             # Verify image was added successfully
             if not pic:
-                logger.warning(f"Failed to add diagram to slide {slide_index}")
+                logger.warning(f"Failed to add diagram '{diagram.spec.title}' to dedicated slide")
                 return False
-            
-            # Save the presentation
-            prs.save(str(presentation_path))
-            
+
+            # Add optional description as speaker notes
+            if hasattr(diagram.spec, 'description') and diagram.spec.description:
+                notes_slide = slide.notes_slide
+                notes_slide.notes_text_frame.text = diagram.spec.description
+
             logger.info(
-                f"Successfully added diagram '{diagram.spec.title}' to slide {slide_index} "
-                f"at position ({position['left']}, {position['top']}) "
-                f"with size ({position['width']} x {position['height']})"
+                f"Successfully created dedicated slide for diagram '{diagram.spec.title}' "
+                f"with layout '{layout_type}' at position ({left.inches}, {top.inches}) "
+                f"with size ({width.inches} x {height.inches})"
             )
             return True
-            
+
         except Exception as e:
-            logger.error(f"Error adding diagram to slide {slide_index}: {e}")
+            logger.error(f"Error creating dedicated slide for diagram '{diagram.spec.title}': {e}")
             return False
 
     async def insert_diagrams_into_presentation(
         self,
         presentation_path: Path,
-        diagrams: List[GeneratedDiagram]
-    ) -> Dict[str, any]:
+        diagrams: list[GeneratedDiagram]
+    ) -> dict[str, any]:
         """
-        Insert multiple diagrams into appropriate slides in the presentation.
+        Insert multiple diagrams as dedicated pages in the presentation.
 
         Args:
             presentation_path: Path to the presentation file
@@ -414,34 +428,29 @@ class PresentationBuilder:
             "failed_insertions": 0,
             "insertion_details": []
         }
-        
+
         if not diagrams:
             logger.info("No diagrams to insert")
             return results
-        
+
         try:
             from pptx import Presentation
-            
-            # Load presentation to check slide count
+
+            # Load presentation
             prs = Presentation(str(presentation_path))
-            total_slides = len(prs.slides)
-            
+
             for diagram in diagrams:
                 try:
-                    # Determine target slide (ensure it's valid)
-                    target_slide = min(diagram.slide_target - 1, total_slides - 1)  # Convert to 0-based
-                    target_slide = max(0, target_slide)  # Ensure non-negative
-                    
-                    # Add diagram to slide
-                    success = await self.add_diagram_to_slide(
-                        presentation_path, target_slide, diagram
+                    # Create a dedicated slide for this diagram
+                    success = await self.add_diagram_as_dedicated_slide(
+                        prs, diagram
                     )
-                    
+
                     if success:
                         results["successful_insertions"] += 1
                         results["insertion_details"].append({
                             "diagram_title": diagram.spec.title,
-                            "slide_index": target_slide,
+                            "slide_index": len(prs.slides) - 1,  # Last added slide
                             "status": "success",
                             "image_path": str(diagram.image_path),
                             "file_size_kb": diagram.file_size_kb
@@ -450,11 +459,11 @@ class PresentationBuilder:
                         results["failed_insertions"] += 1
                         results["insertion_details"].append({
                             "diagram_title": diagram.spec.title,
-                            "slide_index": target_slide,
+                            "slide_index": -1,
                             "status": "failed",
-                            "error": "Failed to add diagram to slide"
+                            "error": "Failed to create dedicated diagram slide"
                         })
-                        
+
                 except Exception as e:
                     results["failed_insertions"] += 1
                     results["insertion_details"].append({
@@ -464,23 +473,26 @@ class PresentationBuilder:
                         "error": str(e)
                     })
                     logger.error(f"Failed to insert diagram '{diagram.spec.title}': {e}")
-            
+
+            # Save the presentation with new diagram slides
+            prs.save(str(presentation_path))
+
             logger.info(
                 f"Diagram insertion complete: {results['successful_insertions']} successful, "
                 f"{results['failed_insertions']} failed"
             )
-            
+
         except Exception as e:
             logger.error(f"Error during diagram insertion: {e}")
             results["error"] = str(e)
-        
+
         return results
 
     def _optimize_diagram_positioning(
-        self, 
+        self,
         slide_layout_name: str,
         diagram_type: str
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """
         Optimize diagram positioning based on slide layout and diagram type.
 
@@ -499,13 +511,13 @@ class PresentationBuilder:
             "Two Content": {"left": 5.0, "top": 1.5, "width": 4.5, "height": 5.5},
             "Blank": {"left": 0.5, "top": 1.0, "width": 9.0, "height": 6.5}
         }
-        
+
         # Get base position for layout
         base_position = layout_positions.get(
-            slide_layout_name, 
+            slide_layout_name,
             layout_positions["Title and Content"]
         )
-        
+
         # Adjust for diagram type
         adjustments = {
             "microservices": {"height": 5.5},
@@ -513,15 +525,15 @@ class PresentationBuilder:
             "cloud_architecture": {"width": 9.0, "height": 6.0},
             "database_schema": {"width": 7.0, "height": 5.0}
         }
-        
+
         if diagram_type in adjustments:
             position = dict(base_position)
             position.update(adjustments[diagram_type])
             return position
-        
+
         return base_position
 
-    def get_presentation_summary(self) -> Dict:
+    def get_presentation_summary(self) -> dict:
         """
         Get summary information about the current presentation.
 
@@ -549,7 +561,7 @@ class PresentationBuilder:
             "slides": slide_summaries
         }
 
-    def validate_presentation_structure(self) -> Dict:
+    def validate_presentation_structure(self) -> dict:
         """
         Validate the current presentation structure.
 
