@@ -7,7 +7,7 @@ An AI-powered system that generates branded PowerPoint presentations for new sal
 - **🤖 AI-Powered Content Generation**: Uses LangChain and OpenAI to analyze project requirements and generate relevant slide content
 - **📁 Multi-Format Document Processing**: Supports PowerPoint (.pptx) and PDF file uploads for reference content extraction
 - **🎨 Template-Based Design**: Maintains consistent Keyrus branding using company PowerPoint templates
-- **🏗️ Architecture Diagram Generation**: Automatically generates professional architecture diagrams using the diagrams library
+- **🏗️ Architecture Diagram Generation**: Automatically generates professional architecture diagrams on dedicated slides using the diagrams library
 - **🌐 User-Friendly Web Interface**: Streamlit-based interface for easy file uploads and project configuration
 - **📊 Real-Time Progress Tracking**: Live updates during the presentation generation process
 - **🔧 Flexible Configuration**: Customizable slide count, presentation focus, and content parameters
@@ -256,6 +256,10 @@ PostgreSQL, MySQL, Redis, RabbitMQ
 - **🎨 Consistent Styling**: Brand-compliant colors and formatting
 - **📱 High Resolution**: PNG format optimized for presentation slides
 - **⚡ Fast Generation**: Sub-2 second generation times
+- **📄 Dedicated Slides**: Each diagram gets its own dedicated slide for optimal viewing
+- **🎯 Smart Positioning**: Diagrams are positioned to maximize slide real estate (9.0" x 5.5")
+- **📝 Automatic Titles**: Each diagram slide includes descriptive titles
+- **🗣️ Speaker Notes**: Auto-generated notes describing diagram components and relationships
 
 ## 📋 Supported File Types
 
@@ -270,8 +274,8 @@ The system generates presentations with the following typical structure:
 2. **Executive Summary**: High-level overview and value proposition
 3. **Understanding Your Needs**: Analysis of client requirements
 4. **Our Approach**: Proposed methodology and solution approach
-5. **Technical Solution**: Detailed technical architecture with generated diagrams
-6. **Architecture Diagrams**: Auto-generated technical architecture visualizations
+5. **Technical Solution**: Detailed technical architecture overview
+6. **Architecture Diagrams**: Auto-generated technical architecture visualizations on dedicated slides
 7. **Relevant Experience**: Showcase of similar work from reference documents
 8. **Timeline & Deliverables**: Project phases and milestones
 9. **Investment & Next Steps**: Value proposition and immediate actions
@@ -394,6 +398,13 @@ For support and questions:
 
 ## 🔄 Version History
 
+- **v0.2.1**: Enhanced diagram integration
+  - **🆕 Dedicated Diagram Slides**: Diagrams now appear on separate slides instead of being embedded in content slides
+  - **🎯 Optimized Positioning**: Diagrams use nearly full slide space (9.0" x 5.5") for better visibility
+  - **🎨 Smart Layout Selection**: Automatically selects optimal slide layouts (blank, diagram, title_content) for diagram slides
+  - **📝 Enhanced Documentation**: Added speaker notes and descriptive titles for each diagram
+  - **⚡ Improved Workflow**: Streamlined presentation building process with better diagram integration
+
 - **v0.2.0**: Enhanced with diagram generation capabilities
   - Architecture diagram generation using diagrams library
   - Multi-cloud provider support (AWS, Azure, GCP, Kubernetes)
@@ -406,6 +417,18 @@ For support and questions:
   - Streamlit web interface
   - PowerPoint and PDF document processing
   - Keyrus template integration
+
+## 📝 Documentation Maintenance
+
+**Important Note for Developers**: When making changes to this project, **always update both `README.md` and `CLAUDE.md` files** to maintain accurate documentation. This ensures that both human developers and AI assistants have access to current information about the system's capabilities and architecture.
+
+**Required updates when modifying:**
+- Feature additions or changes
+- Architecture modifications
+- API changes
+- Configuration updates
+- Dependencies changes
+- Testing procedures
 
 ---
 

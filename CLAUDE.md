@@ -94,7 +94,8 @@ This is a LangChain-powered PowerPoint generation system with a Streamlit web in
 2. **Project Analysis**: Analyze project requirements and specifications  
 3. **Diagram Generation**: Generate architecture diagrams based on identified technologies
 4. **Content Generation**: Generate slide specifications using LLM
-5. **Presentation Building**: Create final branded PowerPoint presentation with embedded diagrams
+5. **Presentation Building**: Create final branded PowerPoint presentation
+6. **Diagram Integration**: Insert diagrams as dedicated slides in the presentation
 
 ## Key Technologies
 
@@ -139,6 +140,28 @@ The system supports the following diagram providers and components:
 - `src/tools/diagram_generator.py`: Core diagram generation using diagrams library
 - `src/chains/diagram_generation_chain.py`: LangChain integration for diagram specifications
 - `src/models/data_models.py`: Pydantic models for diagram components and specifications
+- `src/tools/presentation_builder.py`: Handles diagram integration into presentations
+- `src/tools/template_manager.py`: Manages slide layouts and positioning for diagrams
+
+#### Diagram Integration Architecture
+
+**Dedicated Slide Generation**: As of v0.2.1, diagrams are created as dedicated slides rather than embedded in content slides:
+
+1. **Slide Creation**: Each diagram gets its own slide using optimal layout (blank, diagram, title_content)
+2. **Positioning**: Diagrams are positioned to use nearly full slide space:
+   - Left margin: 0.5 inches
+   - Top margin: 1.5 inches (below title)
+   - Width: 9.0 inches (nearly full slide width)
+   - Height: 5.5 inches (remaining space after title)
+3. **Layout Selection**: `get_optimal_layout_for_diagram()` prioritizes layouts that maximize diagram space
+4. **Automatic Titles**: Each diagram slide includes the diagram title from the specification
+5. **Speaker Notes**: Auto-generated notes describing diagram components and relationships
+
+#### Key Methods
+- `insert_diagrams_into_presentation()`: Creates dedicated slides for each diagram
+- `add_diagram_as_dedicated_slide()`: Handles individual diagram slide creation
+- `get_optimal_layout_for_diagram()`: Selects best layout for diagram-only slides
+- `create_diagram_slide_spec()`: Generates slide specifications for diagrams
 
 #### Import Fixes Applied
 - **Azure Analytics**: Fixed `DataFactory` → `DataFactories` (correct plural form)
@@ -173,3 +196,25 @@ Generated diagrams are saved to `examples/diagrams/` with detailed performance m
 - Test coverage expected for new functionality
 - Integration tests require explicit flag to run
 - Diagram generation uses async/await patterns with proper error handling
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+
+# documentation-maintenance-requirements
+**CRITICAL: When making ANY changes to this project, you MUST update both `README.md` and `CLAUDE.md` files to reflect the changes.**
+
+This ensures:
+- Human developers have up-to-date documentation in README.md
+- AI assistants have current context in CLAUDE.md
+- Project documentation stays synchronized
+
+Always update both files when modifying:
+- Features or functionality
+- Architecture or workflow
+- Configuration or setup
+- Dependencies or requirements
+- Testing procedures
+- File structure or organization
