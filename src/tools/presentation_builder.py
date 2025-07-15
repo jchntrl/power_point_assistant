@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from ..config.settings import settings
-from ..models.data_models import ContentGenerationResult, GeneratedSlide, PresentationSpec, ProjectDescription
+from ..models.data_models import ContentGenerationResult, GeneratedSlide, PresentationSpec, ProjectDescription, GeneratedDiagram
 from .template_manager import TemplateManager
 
 logger = logging.getLogger(__name__)
@@ -324,6 +324,202 @@ class PresentationBuilder:
         except Exception as e:
             logger.error(f"Failed to rebuild presentation: {e}")
             return None
+
+    async def add_diagram_to_slide(
+        self,
+        presentation_path: Path,
+        slide_index: int,
+        diagram: GeneratedDiagram
+    ) -> bool:
+        """
+        Add diagram image to a specific slide in the presentation.
+
+        Args:
+            presentation_path: Path to the presentation file
+            slide_index: Index of slide to add diagram to (0-based)
+            diagram: Generated diagram with image path and position
+
+        Returns:
+            True if diagram added successfully, False otherwise
+        """
+        try:
+            from pptx import Presentation
+            from pptx.util import Inches
+            
+            # Load the presentation
+            prs = Presentation(str(presentation_path))
+            
+            # Validate slide index
+            if slide_index >= len(prs.slides):
+                logger.error(f"Invalid slide index: {slide_index} (max: {len(prs.slides) - 1})")
+                return False
+            
+            slide = prs.slides[slide_index]
+            
+            # Verify diagram image exists
+            if not diagram.image_path.exists():
+                logger.error(f"Diagram image not found: {diagram.image_path}")
+                return False
+            
+            # Get positioning from diagram specification
+            position = diagram.position
+            left = Inches(position["left"])
+            top = Inches(position["top"])
+            width = Inches(position["width"])
+            height = Inches(position["height"])
+            
+            # Add image to slide
+            pic = slide.shapes.add_picture(
+                str(diagram.image_path),
+                left, top, width, height
+            )
+            
+            # Verify image was added successfully
+            if not pic:
+                logger.warning(f"Failed to add diagram to slide {slide_index}")
+                return False
+            
+            # Save the presentation
+            prs.save(str(presentation_path))
+            
+            logger.info(
+                f"Successfully added diagram '{diagram.spec.title}' to slide {slide_index} "
+                f"at position ({position['left']}, {position['top']}) "
+                f"with size ({position['width']} x {position['height']})"
+            )
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error adding diagram to slide {slide_index}: {e}")
+            return False
+
+    async def insert_diagrams_into_presentation(
+        self,
+        presentation_path: Path,
+        diagrams: List[GeneratedDiagram]
+    ) -> Dict[str, any]:
+        """
+        Insert multiple diagrams into appropriate slides in the presentation.
+
+        Args:
+            presentation_path: Path to the presentation file
+            diagrams: List of generated diagrams to insert
+
+        Returns:
+            Dictionary with insertion results
+        """
+        results = {
+            "total_diagrams": len(diagrams),
+            "successful_insertions": 0,
+            "failed_insertions": 0,
+            "insertion_details": []
+        }
+        
+        if not diagrams:
+            logger.info("No diagrams to insert")
+            return results
+        
+        try:
+            from pptx import Presentation
+            
+            # Load presentation to check slide count
+            prs = Presentation(str(presentation_path))
+            total_slides = len(prs.slides)
+            
+            for diagram in diagrams:
+                try:
+                    # Determine target slide (ensure it's valid)
+                    target_slide = min(diagram.slide_target - 1, total_slides - 1)  # Convert to 0-based
+                    target_slide = max(0, target_slide)  # Ensure non-negative
+                    
+                    # Add diagram to slide
+                    success = await self.add_diagram_to_slide(
+                        presentation_path, target_slide, diagram
+                    )
+                    
+                    if success:
+                        results["successful_insertions"] += 1
+                        results["insertion_details"].append({
+                            "diagram_title": diagram.spec.title,
+                            "slide_index": target_slide,
+                            "status": "success",
+                            "image_path": str(diagram.image_path),
+                            "file_size_kb": diagram.file_size_kb
+                        })
+                    else:
+                        results["failed_insertions"] += 1
+                        results["insertion_details"].append({
+                            "diagram_title": diagram.spec.title,
+                            "slide_index": target_slide,
+                            "status": "failed",
+                            "error": "Failed to add diagram to slide"
+                        })
+                        
+                except Exception as e:
+                    results["failed_insertions"] += 1
+                    results["insertion_details"].append({
+                        "diagram_title": diagram.spec.title,
+                        "slide_index": -1,
+                        "status": "failed",
+                        "error": str(e)
+                    })
+                    logger.error(f"Failed to insert diagram '{diagram.spec.title}': {e}")
+            
+            logger.info(
+                f"Diagram insertion complete: {results['successful_insertions']} successful, "
+                f"{results['failed_insertions']} failed"
+            )
+            
+        except Exception as e:
+            logger.error(f"Error during diagram insertion: {e}")
+            results["error"] = str(e)
+        
+        return results
+
+    def _optimize_diagram_positioning(
+        self, 
+        slide_layout_name: str,
+        diagram_type: str
+    ) -> Dict[str, float]:
+        """
+        Optimize diagram positioning based on slide layout and diagram type.
+
+        Args:
+            slide_layout_name: Name of the slide layout
+            diagram_type: Type of diagram being positioned
+
+        Returns:
+            Dictionary with optimized position values
+        """
+        # Define layout-specific positioning
+        layout_positions = {
+            "Title Slide": {"left": 1.0, "top": 3.0, "width": 8.0, "height": 4.0},
+            "Title and Content": {"left": 0.5, "top": 1.8, "width": 9.0, "height": 5.0},
+            "Content with Caption": {"left": 0.5, "top": 1.5, "width": 6.0, "height": 5.5},
+            "Two Content": {"left": 5.0, "top": 1.5, "width": 4.5, "height": 5.5},
+            "Blank": {"left": 0.5, "top": 1.0, "width": 9.0, "height": 6.5}
+        }
+        
+        # Get base position for layout
+        base_position = layout_positions.get(
+            slide_layout_name, 
+            layout_positions["Title and Content"]
+        )
+        
+        # Adjust for diagram type
+        adjustments = {
+            "microservices": {"height": 5.5},
+            "data_pipeline": {"width": 9.5, "height": 4.5},
+            "cloud_architecture": {"width": 9.0, "height": 6.0},
+            "database_schema": {"width": 7.0, "height": 5.0}
+        }
+        
+        if diagram_type in adjustments:
+            position = dict(base_position)
+            position.update(adjustments[diagram_type])
+            return position
+        
+        return base_position
 
     def get_presentation_summary(self) -> Dict:
         """

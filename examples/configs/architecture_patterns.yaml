@@ -1,0 +1,151 @@
+architecture_patterns:
+  
+  microservices:
+    description: "Distributed architecture with loosely coupled services"
+    typical_components:
+      - api_gateway
+      - microservices
+      - databases
+      - message_queues
+      - load_balancers
+    cloud_providers:
+      aws:
+        api_gateway: "APIGateway"
+        service: "Lambda"
+        database: "RDS"
+        queue: "SQS"
+        loadbalancer: "ELB"
+      azure:
+        api_gateway: "ApplicationGateway"
+        service: "FunctionApps"
+        database: "SQLDatabases"
+        queue: "ServiceBus"
+        loadbalancer: "LoadBalancers"
+      gcp:
+        api_gateway: "LoadBalancing"
+        service: "Functions"
+        database: "SQL"
+        queue: "Pub_Sub"
+        loadbalancer: "LoadBalancing"
+    layout_direction: "TB"
+    clustering_strategy: "by_layer"
+    
+  data_pipeline:
+    description: "ETL/ELT pipeline for data processing and analytics"
+    typical_components:
+      - data_sources
+      - streaming_processors
+      - etl_engines
+      - data_warehouses
+      - analytics_tools
+    cloud_providers:
+      aws:
+        streaming: "Kinesis"
+        etl: "Glue"
+        warehouse: "Redshift"
+        analytics: "EMR"
+        storage: "S3"
+      azure:
+        streaming: "EventHubs"
+        etl: "DataFactory"
+        warehouse: "SynapseAnalytics"
+        analytics: "HDInsight"
+        storage: "BlobStorage"
+      gcp:
+        streaming: "Pub_Sub"
+        etl: "DataFlow"
+        warehouse: "BigQuery"
+        analytics: "DataProc"
+        storage: "Storage"
+    layout_direction: "LR"
+    clustering_strategy: "by_function"
+    
+  cloud_architecture:
+    description: "General cloud infrastructure architecture"
+    typical_components:
+      - load_balancers
+      - web_servers
+      - application_servers
+      - databases
+      - storage
+      - networking
+    cloud_providers:
+      aws:
+        compute: "EC2"
+        container: "ECS"
+        database: "RDS"
+        storage: "S3"
+        loadbalancer: "ELB"
+        network: "VPC"
+      azure:
+        compute: "VirtualMachines"
+        container: "ContainerInstances"
+        database: "SQLDatabases"
+        storage: "BlobStorage"
+        loadbalancer: "LoadBalancers"
+        network: "VirtualNetwork"
+      gcp:
+        compute: "ComputeEngine"
+        container: "GKE"
+        database: "SQL"
+        storage: "Storage"
+        loadbalancer: "LoadBalancing"
+        network: "VPC"
+    layout_direction: "TB"
+    clustering_strategy: "by_tier"
+
+diagram_complexity_guidelines:
+  simple:
+    max_components: 8
+    max_connections: 10
+    recommended_layout: "TB"
+    clustering: false
+    
+  medium:
+    max_components: 15
+    max_connections: 20
+    recommended_layout: "TB"
+    clustering: true
+    
+  complex:
+    max_components: 20
+    max_connections: 30
+    recommended_layout: "LR"
+    clustering: true
+
+styling_recommendations:
+  keyrus_brand:
+    primary_color: "#0066CC"
+    secondary_color: "#333333"
+    accent_color: "#FFFFFF"
+    node_style: "rounded,filled"
+    edge_style: "solid"
+    font_family: "Arial"
+    
+  technical_focus:
+    emphasis: "component_types"
+    color_coding: "by_function"
+    labels: "detailed"
+    
+  executive_presentation:
+    emphasis: "data_flow"
+    color_coding: "by_importance"
+    labels: "simplified"
+
+technology_mappings:
+  keywords_to_providers:
+    "aws": ["amazon", "ec2", "s3", "lambda", "rds", "dynamodb"]
+    "azure": ["microsoft", "azure", "cosmos", "functions", "sql server"]
+    "gcp": ["google", "cloud", "bigquery", "firestore", "cloud functions"]
+    "kubernetes": ["k8s", "kubernetes", "pods", "services", "helm"]
+    "onprem": ["on-premise", "datacenter", "bare metal", "vmware"]
+    
+  technology_to_components:
+    "kafka": {"component_type": "streaming", "icon_provider": "onprem"}
+    "redis": {"component_type": "cache", "icon_provider": "onprem"}
+    "postgresql": {"component_type": "database", "icon_provider": "onprem"}
+    "mysql": {"component_type": "database", "icon_provider": "onprem"}
+    "elasticsearch": {"component_type": "search", "icon_provider": "onprem"}
+    "nginx": {"component_type": "loadbalancer", "icon_provider": "onprem"}
+    "docker": {"component_type": "container", "icon_provider": "onprem"}
+    "spark": {"component_type": "analytics", "icon_provider": "onprem"}

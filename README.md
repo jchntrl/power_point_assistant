@@ -7,9 +7,11 @@ An AI-powered system that generates branded PowerPoint presentations for new sal
 - **🤖 AI-Powered Content Generation**: Uses LangChain and OpenAI to analyze project requirements and generate relevant slide content
 - **📁 Multi-Format Document Processing**: Supports PowerPoint (.pptx) and PDF file uploads for reference content extraction
 - **🎨 Template-Based Design**: Maintains consistent Keyrus branding using company PowerPoint templates
+- **🏗️ Architecture Diagram Generation**: Automatically generates professional architecture diagrams using the diagrams library
 - **🌐 User-Friendly Web Interface**: Streamlit-based interface for easy file uploads and project configuration
 - **📊 Real-Time Progress Tracking**: Live updates during the presentation generation process
 - **🔧 Flexible Configuration**: Customizable slide count, presentation focus, and content parameters
+- **☁️ Multi-Cloud Support**: Supports AWS, Azure, GCP, Kubernetes, and on-premises architecture components
 
 ## 🏗️ Architecture
 
@@ -21,11 +23,13 @@ src/
 │   ├── document_analysis_chain.py    # Analyzes uploaded documents
 │   ├── project_analysis_chain.py     # Analyzes project requirements
 │   ├── content_generation_chain.py   # Generates slide specifications
+│   ├── diagram_generation_chain.py   # Generates architecture diagrams
 │   └── orchestration_chain.py        # Main workflow coordination
 ├── tools/                     # Core processing tools
 │   ├── document_processor.py         # PowerPoint/PDF text extraction
 │   ├── file_handler.py              # Streamlit file upload management
 │   ├── template_manager.py          # PowerPoint template handling
+│   ├── diagram_generator.py         # Architecture diagram generation
 │   └── presentation_builder.py      # Final presentation creation
 ├── models/                    # Pydantic data models
 │   └── data_models.py               # Type-safe data structures
@@ -40,6 +44,7 @@ src/
 - Python 3.9+
 - OpenAI API key
 - Keyrus PowerPoint template file
+- Graphviz (for diagram generation)
 
 ### Installation
 
@@ -49,24 +54,36 @@ src/
    cd power_point_assistant
    ```
 
-2. **Create and activate virtual environment**
+2. **Install system dependencies**
+   ```bash
+   # Ubuntu/Debian
+   sudo apt-get install graphviz
+   
+   # macOS
+   brew install graphviz
+   
+   # Windows (using chocolatey)
+   choco install graphviz
+   ```
+
+3. **Create and activate virtual environment**
    ```bash
    python3 -m venv linux_venv
    source linux_venv/bin/activate  # On Windows: linux_venv\Scripts\activate
    ```
 
-3. **Install dependencies**
+4. **Install dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Configure environment variables**
+5. **Configure environment variables**
    ```bash
    cp .env.example .env
    # Edit .env with your OpenAI API key and other settings
    ```
 
-5. **Run the application**
+6. **Run the application**
    ```bash
    streamlit run streamlit_app.py
    ```
@@ -184,6 +201,62 @@ ruff check src/ tests/
 mypy src/
 ```
 
+### Diagram Generation Testing
+```bash
+# Test diagram generation with example project
+python test_diagram_generation.py
+
+# View generated diagrams
+ls examples/diagrams/
+```
+
+## 🏗️ Architecture Diagram Generation
+
+The system automatically generates professional architecture diagrams based on project requirements and technologies mentioned in the project description.
+
+### Supported Providers
+
+- **☁️ Cloud Providers**: AWS, Azure, GCP, Alibaba Cloud, Oracle Cloud
+- **🔧 Container Orchestration**: Kubernetes, Docker
+- **🏢 On-Premises**: PostgreSQL, MySQL, Redis, RabbitMQ
+- **🎨 Generic**: Programming languages, frameworks, and custom components
+
+### Diagram Types
+
+- **Multi-Cloud Architecture**: Cross-cloud service integration
+- **Data Processing Pipelines**: Stream and batch processing workflows
+- **Microservices Architecture**: Container-based service architectures
+- **Database Schemas**: Relational and NoSQL database designs
+
+### Example Technologies
+
+```python
+# AWS Services
+EC2, Lambda, S3, RDS, DynamoDB, Kinesis, Glue, EMR, Redshift, API Gateway, SQS, SNS
+
+# Azure Services
+Container Instances, Functions, Blob Storage, SQL Database, Cosmos DB, Event Hubs, 
+Data Factory, Synapse Analytics, Service Bus, Application Gateway
+
+# GCP Services
+Compute Engine, Cloud Functions, Cloud Storage, Cloud SQL, Firestore, Pub/Sub, 
+Dataflow, BigQuery, Kubernetes Engine
+
+# Kubernetes Components
+Pods, Services, Deployments, StatefulSets, ConfigMaps, Secrets
+
+# On-Premises
+PostgreSQL, MySQL, Redis, RabbitMQ
+```
+
+### Generated Diagram Features
+
+- **📊 Professional Layout**: Automatic component positioning and clustering
+- **🔗 Smart Connections**: Labeled relationships between components
+- **🎨 Consistent Styling**: Brand-compliant colors and formatting
+- **📱 High Resolution**: PNG format optimized for presentation slides
+- **⚡ Fast Generation**: Sub-2 second generation times
+
 ## 📋 Supported File Types
 
 - **PowerPoint**: `.pptx` files (Microsoft PowerPoint 2007+)
@@ -197,10 +270,11 @@ The system generates presentations with the following typical structure:
 2. **Executive Summary**: High-level overview and value proposition
 3. **Understanding Your Needs**: Analysis of client requirements
 4. **Our Approach**: Proposed methodology and solution approach
-5. **Technical Solution**: Detailed technical architecture
-6. **Relevant Experience**: Showcase of similar work from reference documents
-7. **Timeline & Deliverables**: Project phases and milestones
-8. **Investment & Next Steps**: Value proposition and immediate actions
+5. **Technical Solution**: Detailed technical architecture with generated diagrams
+6. **Architecture Diagrams**: Auto-generated technical architecture visualizations
+7. **Relevant Experience**: Showcase of similar work from reference documents
+8. **Timeline & Deliverables**: Project phases and milestones
+9. **Investment & Next Steps**: Value proposition and immediate actions
 
 ## 🔧 Advanced Configuration
 
@@ -301,6 +375,9 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - **Pydantic**: Data validation and settings
 - **python-pptx**: PowerPoint file manipulation
 - **pypdf**: PDF text extraction
+- **diagrams**: Architecture diagram generation
+- **graphviz**: Diagram layout engine
+- **Pillow**: Image processing
 
 ### Development Dependencies
 - **pytest**: Testing framework
@@ -316,6 +393,13 @@ For support and questions:
 - Review the logs in `./logs/powerpoint_assistant.log`
 
 ## 🔄 Version History
+
+- **v0.2.0**: Enhanced with diagram generation capabilities
+  - Architecture diagram generation using diagrams library
+  - Multi-cloud provider support (AWS, Azure, GCP, Kubernetes)
+  - Automatic component recognition and layout
+  - Professional diagram styling and branding
+  - Example project templates and test suite
 
 - **v0.1.0**: Initial release with core functionality
   - LangChain-based content generation

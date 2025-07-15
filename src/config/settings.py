@@ -89,6 +89,39 @@ class Settings(BaseSettings):
     langchain_debug: bool = Field(
         default=False, description="Enable debug mode for LangChain"
     )
+    
+    # Diagram Generation Settings
+    diagram_output_dir: Path = Field(
+        default=Path("./data/generated/diagrams"),
+        description="Directory for generated diagram images"
+    )
+    diagram_dpi: int = Field(
+        default=300, ge=150, le=600, description="DPI for generated diagrams"
+    )
+    diagram_style: str = Field(
+        default="keyrus_brand", description="Diagram styling theme"
+    )
+    max_diagram_components: int = Field(
+        default=20, ge=2, le=50, description="Maximum components per diagram"
+    )
+    diagram_generation_timeout: int = Field(
+        default=30, ge=10, le=120, description="Diagram generation timeout in seconds"
+    )
+    enable_diagram_generation: bool = Field(
+        default=True, description="Enable/disable diagram generation feature"
+    )
+    diagram_cache_enabled: bool = Field(
+        default=True, description="Enable diagram caching for similar projects"
+    )
+    keyrus_primary_color: str = Field(
+        default="#0066CC", description="Keyrus primary brand color"
+    )
+    keyrus_secondary_color: str = Field(
+        default="#333333", description="Keyrus secondary color"
+    )
+    keyrus_accent_color: str = Field(
+        default="#FFFFFF", description="Keyrus accent color"
+    )
 
     class Config:
         """Pydantic configuration."""
@@ -98,7 +131,7 @@ class Settings(BaseSettings):
         case_sensitive = False
         extra = "ignore"
 
-    @validator("template_dir", "previous_decks_dir", "output_dir")
+    @validator("template_dir", "previous_decks_dir", "output_dir", "diagram_output_dir")
     def validate_directories(cls, v: Path) -> Path:
         """Validate that directories exist or can be created."""
         if not v.exists():
@@ -147,6 +180,14 @@ class Settings(BaseSettings):
                 raise ValueError(f"Invalid extension: {ext}. Must be one of {valid_extensions}")
         
         return ",".join(extensions)
+
+    @validator("keyrus_primary_color", "keyrus_secondary_color", "keyrus_accent_color")
+    def validate_color_hex(cls, v: str) -> str:
+        """Validate that color is a valid hex color."""
+        import re
+        if not re.match(r'^#[0-9A-Fa-f]{6}$', v):
+            raise ValueError(f"Invalid hex color format: {v}. Must be in format #RRGGBB")
+        return v.upper()
 
     @property
     def allowed_extensions_list(self) -> List[str]:

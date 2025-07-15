@@ -61,8 +61,9 @@ class GeneratedSlide(BaseModel):
     content: List[str] = Field(
         ..., min_items=1, description="Bullet points or content sections"
     )
-    layout_type: str = Field(default="bullet", description="Slide layout type")
+    layout_type: str = Field(default="bullet", description="bullet|title|diagram|split")
     notes: Optional[str] = Field(None, description="Speaker notes")
+    diagram: Optional["GeneratedDiagram"] = Field(None, description="Associated diagram for this slide")
 
 
 class PresentationSpec(BaseModel):
@@ -178,3 +179,59 @@ class FileUploadInfo(BaseModel):
     extracted_content_count: int = Field(
         default=0, description="Number of extracted content items"
     )
+
+
+class DiagramComponent(BaseModel):
+    """Individual component in an architecture diagram."""
+    
+    name: str = Field(..., min_length=1, description="Component display name")
+    component_type: str = Field(..., description="Type: service, database, queue, api, storage")
+    icon_provider: str = Field(default="aws", description="Icon provider: aws, azure, gcp, kubernetes")
+    icon_name: str = Field(..., description="Specific icon name from provider")
+    position_hint: Optional[str] = Field(None, description="Layout hint: top, bottom, left, right, center")
+
+
+class DiagramConnection(BaseModel):
+    """Connection between diagram components."""
+    
+    source: str = Field(..., description="Source component name")
+    target: str = Field(..., description="Target component name")
+    connection_type: str = Field(default="arrow", description="Connection type: arrow, edge, bidirectional")
+    label: Optional[str] = Field(None, description="Connection label")
+
+
+class DiagramSpec(BaseModel):
+    """Complete specification for diagram generation."""
+    
+    diagram_type: str = Field(..., description="Type: microservices, data_pipeline, cloud_architecture")
+    title: str = Field(..., min_length=1, description="Diagram title")
+    components: List[DiagramComponent] = Field(..., min_items=2, max_items=20)
+    connections: List[DiagramConnection] = Field(default_factory=list)
+    layout_direction: str = Field(default="TB", description="Layout: TB, LR, BT, RL")
+    clustering: Dict[str, List[str]] = Field(default_factory=dict, description="Component grouping")
+    styling: Dict[str, Any] = Field(default_factory=dict, description="Custom styling options")
+
+
+class GeneratedDiagram(BaseModel):
+    """Result of diagram generation process."""
+    
+    spec: DiagramSpec
+    image_path: Path = Field(..., description="Path to generated diagram image")
+    file_size_kb: int = Field(..., ge=0, description="Generated file size")
+    generation_time_ms: int = Field(..., ge=0, description="Time taken to generate")
+    slide_target: int = Field(..., ge=1, description="Target slide number for insertion")
+    position: Dict[str, float] = Field(..., description="Slide position: left, top, width, height")
+
+
+class DiagramGenerationResult(BaseModel):
+    """Complete result of diagram generation chain."""
+    
+    diagrams: List[GeneratedDiagram] = Field(..., description="Generated diagrams")
+    success_count: int = Field(default=0, ge=0, description="Number of successfully generated diagrams")
+    total_generation_time_ms: int = Field(default=0, ge=0, description="Total processing time")
+    confidence_score: float = Field(default=0.0, ge=0.0, le=1.0, description="Generation confidence")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional generation metadata")
+
+
+# Update forward references for type hints
+GeneratedSlide.model_rebuild()

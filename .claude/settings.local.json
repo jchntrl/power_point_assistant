@@ -20,7 +20,17 @@
       "Bash(pip install:*)",
       "Bash(pip show:*)",
       "Bash(poetry install:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "WebFetch(domain:diagrams.mingrammer.com)",
+      "WebFetch(domain:python-pptx.readthedocs.io)",
+      "WebFetch(domain:python.langchain.com)",
+      "WebFetch(domain:dev.to)",
+      "WebFetch(domain:medium.com)",
+      "Bash(mypy:*)",
+      "Bash(black:*)",
+      "Bash(rm:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(dot:*)"
     ],
     "deny": []
   }

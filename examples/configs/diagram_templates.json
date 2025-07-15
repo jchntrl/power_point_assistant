@@ -1,0 +1,245 @@
+{
+  "microservices_template": {
+    "diagram_type": "microservices",
+    "title": "Microservices Architecture",
+    "components": [
+      {
+        "name": "API Gateway",
+        "component_type": "api",
+        "icon_provider": "aws",
+        "icon_name": "APIGateway",
+        "position_hint": "top"
+      },
+      {
+        "name": "User Service",
+        "component_type": "service",
+        "icon_provider": "aws", 
+        "icon_name": "Lambda",
+        "position_hint": "left"
+      },
+      {
+        "name": "Product Service",
+        "component_type": "service",
+        "icon_provider": "aws",
+        "icon_name": "Lambda", 
+        "position_hint": "center"
+      },
+      {
+        "name": "Order Service",
+        "component_type": "service",
+        "icon_provider": "aws",
+        "icon_name": "Lambda",
+        "position_hint": "right"
+      },
+      {
+        "name": "User Database",
+        "component_type": "database",
+        "icon_provider": "aws",
+        "icon_name": "RDS",
+        "position_hint": "bottom"
+      },
+      {
+        "name": "Product Database", 
+        "component_type": "database",
+        "icon_provider": "aws",
+        "icon_name": "RDS",
+        "position_hint": "bottom"
+      },
+      {
+        "name": "Message Queue",
+        "component_type": "queue",
+        "icon_provider": "aws",
+        "icon_name": "SQS",
+        "position_hint": "bottom"
+      }
+    ],
+    "connections": [
+      {
+        "source": "API Gateway",
+        "target": "User Service",
+        "connection_type": "arrow"
+      },
+      {
+        "source": "API Gateway", 
+        "target": "Product Service",
+        "connection_type": "arrow"
+      },
+      {
+        "source": "API Gateway",
+        "target": "Order Service", 
+        "connection_type": "arrow"
+      },
+      {
+        "source": "User Service",
+        "target": "User Database",
+        "connection_type": "arrow"
+      },
+      {
+        "source": "Product Service",
+        "target": "Product Database",
+        "connection_type": "arrow"
+      },
+      {
+        "source": "Order Service",
+        "target": "Message Queue",
+        "connection_type": "arrow"
+      }
+    ],
+    "layout_direction": "TB",
+    "clustering": {
+      "Application Layer": ["User Service", "Product Service", "Order Service"],
+      "Data Layer": ["User Database", "Product Database", "Message Queue"]
+    }
+  },
+
+  "data_pipeline_template": {
+    "diagram_type": "data_pipeline",
+    "title": "Data Processing Pipeline",
+    "components": [
+      {
+        "name": "Data Sources",
+        "component_type": "storage",
+        "icon_provider": "aws",
+        "icon_name": "S3",
+        "position_hint": "left"
+      },
+      {
+        "name": "Stream Processor",
+        "component_type": "streaming",
+        "icon_provider": "aws", 
+        "icon_name": "Kinesis",
+        "position_hint": "center"
+      },
+      {
+        "name": "ETL Process",
+        "component_type": "etl",
+        "icon_provider": "aws",
+        "icon_name": "Glue",
+        "position_hint": "center"
+      },
+      {
+        "name": "Data Warehouse",
+        "component_type": "warehouse",
+        "icon_provider": "aws",
+        "icon_name": "Redshift", 
+        "position_hint": "right"
+      },
+      {
+        "name": "Analytics Engine",
+        "component_type": "analytics",
+        "icon_provider": "aws",
+        "icon_name": "EMR",
+        "position_hint": "right"
+      }
+    ],
+    "connections": [
+      {
+        "source": "Data Sources",
+        "target": "Stream Processor",
+        "connection_type": "data_flow",
+        "label": "Raw Data"
+      },
+      {
+        "source": "Stream Processor", 
+        "target": "ETL Process",
+        "connection_type": "data_flow",
+        "label": "Processed Data"
+      },
+      {
+        "source": "ETL Process",
+        "target": "Data Warehouse",
+        "connection_type": "data_flow",
+        "label": "Clean Data"
+      },
+      {
+        "source": "Data Warehouse",
+        "target": "Analytics Engine",
+        "connection_type": "arrow",
+        "label": "Query"
+      }
+    ],
+    "layout_direction": "LR"
+  },
+
+  "cloud_architecture_template": {
+    "diagram_type": "cloud_architecture", 
+    "title": "Cloud Infrastructure",
+    "components": [
+      {
+        "name": "Load Balancer",
+        "component_type": "loadbalancer",
+        "icon_provider": "aws",
+        "icon_name": "ELB",
+        "position_hint": "top"
+      },
+      {
+        "name": "Web Servers",
+        "component_type": "compute",
+        "icon_provider": "aws",
+        "icon_name": "EC2", 
+        "position_hint": "center"
+      },
+      {
+        "name": "Application Servers",
+        "component_type": "compute",
+        "icon_provider": "aws",
+        "icon_name": "EC2",
+        "position_hint": "center"
+      },
+      {
+        "name": "Database Cluster",
+        "component_type": "database",
+        "icon_provider": "aws",
+        "icon_name": "RDS",
+        "position_hint": "bottom"
+      },
+      {
+        "name": "Cache Layer", 
+        "component_type": "cache",
+        "icon_provider": "onprem",
+        "icon_name": "Redis",
+        "position_hint": "center"
+      },
+      {
+        "name": "Object Storage",
+        "component_type": "storage",
+        "icon_provider": "aws",
+        "icon_name": "S3",
+        "position_hint": "bottom"
+      }
+    ],
+    "connections": [
+      {
+        "source": "Load Balancer",
+        "target": "Web Servers",
+        "connection_type": "arrow"
+      },
+      {
+        "source": "Web Servers", 
+        "target": "Application Servers",
+        "connection_type": "arrow"
+      },
+      {
+        "source": "Application Servers",
+        "target": "Database Cluster",
+        "connection_type": "arrow"
+      },
+      {
+        "source": "Application Servers",
+        "target": "Cache Layer",
+        "connection_type": "arrow"
+      },
+      {
+        "source": "Application Servers",
+        "target": "Object Storage",
+        "connection_type": "arrow"
+      }
+    ],
+    "layout_direction": "TB",
+    "clustering": {
+      "Presentation Tier": ["Load Balancer", "Web Servers"],
+      "Application Tier": ["Application Servers", "Cache Layer"],
+      "Data Tier": ["Database Cluster", "Object Storage"]
+    }
+  }
+}

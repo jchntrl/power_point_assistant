@@ -95,6 +95,16 @@ class TemplateManager:
                 self._layout_mapping["blank"] = i
             elif "section" in layout_name:
                 self._layout_mapping["section"] = i
+            elif "two content" in layout_name or "comparison" in layout_name:
+                self._layout_mapping["two_content"] = i
+            elif "picture" in layout_name or "caption" in layout_name:
+                self._layout_mapping["picture_caption"] = i
+            
+            # Diagram-specific layout patterns
+            if "diagram" in layout_name:
+                self._layout_mapping["diagram"] = i
+            elif "split" in layout_name:
+                self._layout_mapping["split"] = i
 
         logger.debug(f"Mapped {len(self._layout_mapping)} layout patterns")
 
@@ -124,6 +134,15 @@ class TemplateManager:
             return self._layout_mapping.get("bullet", 1)
         elif layout_type == "blank":
             return self._layout_mapping.get("blank", 6)
+        elif layout_type == "diagram":
+            # Prefer blank layout for diagrams, then two_content, then default
+            return self._layout_mapping.get("diagram", 
+                   self._layout_mapping.get("blank", 
+                   self._layout_mapping.get("two_content", 6)))
+        elif layout_type == "split":
+            # For split content with diagram
+            return self._layout_mapping.get("split",
+                   self._layout_mapping.get("two_content", 1))
         
         # Default fallback
         logger.warning(f"Layout type '{layout_type}' not found, using default (1)")
@@ -259,6 +278,132 @@ class TemplateManager:
 
         except Exception as e:
             logger.warning(f"Error setting content placeholder: {e}")
+
+    def get_optimal_layout_for_diagram(self, diagram_type: str, has_content: bool = True) -> str:
+        """
+        Get optimal slide layout for a diagram type.
+
+        Args:
+            diagram_type: Type of diagram (microservices, data_pipeline, etc.)
+            has_content: Whether slide will have text content alongside diagram
+
+        Returns:
+            Recommended layout type
+        """
+        # Diagram-specific layout preferences
+        layout_preferences = {
+            "microservices": "diagram" if not has_content else "split",
+            "data_pipeline": "blank" if not has_content else "two_content", 
+            "cloud_architecture": "diagram" if not has_content else "split",
+            "database_schema": "blank" if not has_content else "picture_caption"
+        }
+        
+        preferred_layout = layout_preferences.get(diagram_type, "blank")
+        
+        # Fallback to available layouts if preferred not available
+        if preferred_layout not in self._layout_mapping:
+            if has_content:
+                preferred_layout = "two_content" if "two_content" in self._layout_mapping else "bullet"
+            else:
+                preferred_layout = "blank" if "blank" in self._layout_mapping else "bullet"
+        
+        logger.debug(f"Selected layout '{preferred_layout}' for diagram type '{diagram_type}'")
+        return preferred_layout
+
+    def adjust_slide_for_diagram(self, slide: Slide, layout_type: str) -> Dict[str, any]:
+        """
+        Adjust slide layout to accommodate diagram insertion.
+
+        Args:
+            slide: Slide object to adjust
+            layout_type: Type of layout being used
+
+        Returns:
+            Dictionary with adjustment information
+        """
+        adjustment_info = {
+            "layout_type": layout_type,
+            "adjustments_made": [],
+            "content_area": None,
+            "diagram_area": None
+        }
+        
+        try:
+            # Get slide dimensions (standard PowerPoint slide)
+            slide_width = Inches(10)  # Standard slide width
+            slide_height = Inches(7.5)  # Standard slide height
+            
+            if layout_type in ["two_content", "split"]:
+                # Split layout - content on left, diagram on right
+                adjustment_info["content_area"] = {
+                    "left": Inches(0.5),
+                    "top": Inches(1.5),
+                    "width": Inches(4.5),
+                    "height": Inches(5.5)
+                }
+                adjustment_info["diagram_area"] = {
+                    "left": Inches(5.0),
+                    "top": Inches(1.5), 
+                    "width": Inches(4.5),
+                    "height": Inches(5.5)
+                }
+                adjustment_info["adjustments_made"].append("Split layout configured")
+                
+            elif layout_type in ["blank", "diagram"]:
+                # Full slide for diagram with minimal text
+                adjustment_info["content_area"] = {
+                    "left": Inches(0.5),
+                    "top": Inches(1.0),
+                    "width": Inches(9.0),
+                    "height": Inches(1.0)
+                }
+                adjustment_info["diagram_area"] = {
+                    "left": Inches(0.5),
+                    "top": Inches(2.2),
+                    "width": Inches(9.0),
+                    "height": Inches(5.0)
+                }
+                adjustment_info["adjustments_made"].append("Full diagram layout configured")
+                
+            elif layout_type == "picture_caption":
+                # Diagram with caption below
+                adjustment_info["diagram_area"] = {
+                    "left": Inches(1.0),
+                    "top": Inches(1.5),
+                    "width": Inches(8.0),
+                    "height": Inches(4.5)
+                }
+                adjustment_info["content_area"] = {
+                    "left": Inches(1.0),
+                    "top": Inches(6.0),
+                    "width": Inches(8.0),
+                    "height": Inches(1.0)
+                }
+                adjustment_info["adjustments_made"].append("Picture caption layout configured")
+                
+            else:
+                # Default content layout with space for diagram
+                adjustment_info["content_area"] = {
+                    "left": Inches(0.5),
+                    "top": Inches(1.5),
+                    "width": Inches(4.0),
+                    "height": Inches(5.5)
+                }
+                adjustment_info["diagram_area"] = {
+                    "left": Inches(5.0),
+                    "top": Inches(1.5),
+                    "width": Inches(4.5),
+                    "height": Inches(5.5)
+                }
+                adjustment_info["adjustments_made"].append("Default content layout with diagram space")
+            
+            logger.debug(f"Adjusted slide for diagram: {adjustment_info['adjustments_made']}")
+            
+        except Exception as e:
+            logger.error(f"Error adjusting slide for diagram: {e}")
+            adjustment_info["error"] = str(e)
+        
+        return adjustment_info
 
     def create_presentation_from_spec(self, spec: PresentationSpec) -> Path:
         """

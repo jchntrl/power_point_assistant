@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from ..config.settings import settings
 from ..models.data_models import (
     ContentGenerationResult,
+    DiagramGenerationResult,
     DocumentAnalysisResult,
     ExtractedContent,
     ProcessingStatus,
@@ -21,6 +22,7 @@ from ..models.data_models import (
 from ..tools.document_processor import DocumentProcessor
 from ..tools.presentation_builder import PresentationBuilder
 from .content_generation_chain import ContentGenerationChain
+from .diagram_generation_chain import DiagramGenerationChain
 from .document_analysis_chain import DocumentAnalysisChain
 from .project_analysis_chain import ProjectAnalysisChain
 
@@ -34,8 +36,9 @@ class PowerPointOrchestrationChain:
     Coordinates the complete process:
     1. Document Analysis → Extract and analyze uploaded documents
     2. Project Analysis → Analyze project requirements
-    3. Content Generation → Generate slide specifications
-    4. Presentation Building → Create final PowerPoint file
+    3. Diagram Generation → Generate architecture diagrams
+    4. Content Generation → Generate slide specifications
+    5. Presentation Building → Create final PowerPoint file with diagrams
     """
 
     def __init__(self) -> None:
@@ -43,6 +46,7 @@ class PowerPointOrchestrationChain:
         self.document_processor = DocumentProcessor()
         self.document_analysis_chain = DocumentAnalysisChain()
         self.project_analysis_chain = ProjectAnalysisChain()
+        self.diagram_generation_chain = DiagramGenerationChain()
         self.content_generation_chain = ContentGenerationChain()
         self.presentation_builder = PresentationBuilder()
         
@@ -94,14 +98,33 @@ class PowerPointOrchestrationChain:
             )
             
             # Step 2: Project Analysis
-            self._update_status("analyzing_project", 0.4, "Analyzing project requirements...")
+            self._update_status("analyzing_project", 0.3, "Analyzing project requirements...")
             if progress_callback:
                 progress_callback(self.current_status)
             
             project_analysis = await self.project_analysis_chain.analyze_project(project)
             
-            # Step 3: Content Generation
-            self._update_status("generating_content", 0.6, "Generating slide content...")
+            # Step 3: Diagram Generation
+            self._update_status("generating_diagrams", 0.5, "Generating architecture diagrams...")
+            if progress_callback:
+                progress_callback(self.current_status)
+            
+            diagram_generation_result = DiagramGenerationResult(diagrams=[], success_count=0)
+            if settings.enable_diagram_generation:
+                try:
+                    diagram_generation_result = await self.diagram_generation_chain.generate_diagram_specs(
+                        project=project,
+                        project_analysis=project_analysis,
+                        document_analysis=document_analysis
+                    )
+                    logger.info(f"Generated {diagram_generation_result.success_count} diagrams")
+                except Exception as e:
+                    logger.warning(f"Diagram generation failed: {e}")
+            else:
+                logger.info("Diagram generation is disabled")
+            
+            # Step 4: Content Generation
+            self._update_status("generating_content", 0.7, "Generating slide content...")
             if progress_callback:
                 progress_callback(self.current_status)
             
@@ -112,8 +135,8 @@ class PowerPointOrchestrationChain:
                 target_slide_count=target_slide_count
             )
             
-            # Step 4: Presentation Building
-            self._update_status("building_presentation", 0.8, "Creating PowerPoint presentation...")
+            # Step 5: Presentation Building
+            self._update_status("building_presentation", 0.85, "Creating PowerPoint presentation...")
             if progress_callback:
                 progress_callback(self.current_status)
             
@@ -122,6 +145,26 @@ class PowerPointOrchestrationChain:
                 generation_result=generation_result,
                 template_path=template_path
             )
+            
+            # Step 6: Insert Diagrams
+            diagram_insertion_results = {}
+            if diagram_generation_result.diagrams:
+                self._update_status("inserting_diagrams", 0.95, "Inserting diagrams into presentation...")
+                if progress_callback:
+                    progress_callback(self.current_status)
+                
+                try:
+                    diagram_insertion_results = await self.presentation_builder.insert_diagrams_into_presentation(
+                        presentation_path=presentation_path,
+                        diagrams=diagram_generation_result.diagrams
+                    )
+                    logger.info(
+                        f"Inserted {diagram_insertion_results.get('successful_insertions', 0)} diagrams "
+                        f"into presentation"
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to insert diagrams: {e}")
+                    diagram_insertion_results = {"error": str(e)}
             
             # Final step: Complete
             self._update_status("completed", 1.0, f"Presentation created successfully: {presentation_path.name}")
@@ -134,13 +177,17 @@ class PowerPointOrchestrationChain:
                 "presentation_path": presentation_path,
                 "project_analysis": project_analysis,
                 "document_analysis": document_analysis,
+                "diagram_generation_result": diagram_generation_result,
+                "diagram_insertion_results": diagram_insertion_results,
                 "generation_result": generation_result,
                 "extracted_content_count": len(extracted_content),
                 "final_slide_count": len(generation_result.slides),
+                "diagram_count": len(diagram_generation_result.diagrams),
                 "confidence_score": generation_result.confidence_score,
                 "processing_status": self.current_status,
                 "summary": self._generate_summary(
-                    project, project_analysis, document_analysis, generation_result, presentation_path
+                    project, project_analysis, document_analysis, generation_result, 
+                    presentation_path, diagram_generation_result
                 )
             }
             
@@ -221,8 +268,8 @@ class PowerPointOrchestrationChain:
             message=message,
             error=error,
             current_step=message,
-            total_steps=5,
-            completed_steps=int(progress * 5)
+            total_steps=6,
+            completed_steps=int(progress * 6)
         )
 
     def _generate_summary(
@@ -231,7 +278,8 @@ class PowerPointOrchestrationChain:
         project_analysis: ProjectAnalysisResult,
         document_analysis: DocumentAnalysisResult,
         generation_result: ContentGenerationResult,
-        presentation_path: Path
+        presentation_path: Path,
+        diagram_generation_result: DiagramGenerationResult
     ) -> Dict[str, Any]:
         """
         Generate comprehensive summary of the generation process.
@@ -255,12 +303,17 @@ class PowerPointOrchestrationChain:
             "project_requirements": len(project_analysis.requirements),
             "target_audience": project_analysis.target_audience,
             "slides_generated": len(generation_result.slides),
+            "diagrams_generated": len(diagram_generation_result.diagrams),
+            "diagram_generation_enabled": settings.enable_diagram_generation,
+            "diagram_types": [diagram.spec.diagram_type for diagram in diagram_generation_result.diagrams],
             "confidence_score": generation_result.confidence_score,
+            "diagram_confidence_score": diagram_generation_result.confidence_score,
             "presentation_file": presentation_path.name,
             "file_size_mb": round(presentation_path.stat().st_size / (1024 * 1024), 2) if presentation_path.exists() else 0,
             "key_technologies": document_analysis.technologies[:5],
             "key_approaches": document_analysis.approaches[:3],
-            "slide_titles": [slide.title for slide in generation_result.slides]
+            "slide_titles": [slide.title for slide in generation_result.slides],
+            "diagram_titles": [diagram.spec.title for diagram in diagram_generation_result.diagrams]
         }
 
     async def validate_inputs(
@@ -398,7 +451,12 @@ class PowerPointOrchestrationChain:
 
     async def cleanup_resources(self) -> None:
         """Clean up any resources used during processing."""
-        # Implementation for cleanup if needed
+        try:
+            # Clean up diagram generation resources
+            await self.diagram_generation_chain.cleanup_resources()
+        except Exception as e:
+            logger.warning(f"Error cleaning up diagram resources: {e}")
+        
         logger.info("Orchestration chain cleanup completed")
 
 
