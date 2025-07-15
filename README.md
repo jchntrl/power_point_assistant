@@ -432,4 +432,4 @@ For support and questions:
 
 ---
 
-*Powered by LangChain, OpenAI, and Streamlit • Built with ❤️ for Keyrus*
+*Powered by LangChain, OpenAI, and Streamlit • Built by Julien Chantrel for Keyrus*
